@@ -1,0 +1,26 @@
+services:
+  backend:
+    build:
+      context: ./
+      dockerfile: docker/app.Dockerfile
+    depends_on:
+      - celeryworker
+      - redis
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  celeryworker:
+    build:
+      context: ./
+      dockerfile: docker/celery.Dockerfile
+    restart: always
+    depends_on:
+      - redis
+
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6379:6379"
