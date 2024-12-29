@@ -27,10 +27,17 @@ class Settings:
     # Route Information
     API_V1_STR = "/v1"
 
-    CORS_ORIGINS = []  # noqa
+    CORS_ORIGINS = []
     CORS_ALLOW_CREDENTIALS = True
     CORS_ALLOW_METHODS = ["*"]
     CORS_ALLOW_HEADERS = ["*"]
+
+    @property
+    def DATABASE_URI(self):
+        if self.LOCAL:
+            return "postgresql://postgres:root@localhost:5432/kraftbase"
+        else:
+            return "postgresql://postgres:root@postgres:5432/kraftbase"
 
 
 settings = Settings()
