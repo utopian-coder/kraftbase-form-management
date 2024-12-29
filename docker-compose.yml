@@ -4,23 +4,19 @@ services:
       context: ./
       dockerfile: docker/app.Dockerfile
     depends_on:
-      - celeryworker
-      - redis
+      - postgres
     restart: always
     ports:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
+      - ENV=TEST
 
-  celeryworker:
-    build:
-      context: ./
-      dockerfile: docker/celery.Dockerfile
-    restart: always
-    depends_on:
-      - redis
-
-  redis:
-    image: "redis:alpine"
+  postgres:
+    image: "postgres:17-alpine"
+    environment:
+      - POSTGRES_PASSWORD=root
     ports:
-      - "6379:6379"
+      - "5432:5432"
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
