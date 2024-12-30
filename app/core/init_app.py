@@ -2,9 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
+from sqlalchemy.exc import IntegrityError
 
 from app.settings.config import settings
-from app.core.exceptions import APIException
+from app.core.exceptions import APIException, SQLAlchemyExceptionHandler
 
 
 def init_middlewares(app: FastAPI):
@@ -25,3 +26,4 @@ def init_middlewares(app: FastAPI):
 
 def register_exceptions(app: FastAPI):
     app.add_exception_handler(APIException, APIException.handler)
+    app.add_exception_handler(IntegrityError, SQLAlchemyExceptionHandler.integrityErrorHandler)

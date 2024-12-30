@@ -5,12 +5,10 @@ from uuid import UUID, uuid4
 from fastapi import Cookie, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from sqlalchemy import delete
 
 from app.core.database import db
 from app.models.session import UserSession
 from app.models.user import User
-from app.schemas.auth import UserInDB
 
 
 class SessionCookies(BaseModel):

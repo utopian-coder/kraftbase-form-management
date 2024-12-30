@@ -5,19 +5,20 @@ from fastapi import HTTPException
 from pydantic import TypeAdapter
 from sqlalchemy.orm import Session
 
-from app.models.form import Form
-from app.schemas.form import FormCreate, FormInDB, FormSubmissionCreate, FormSubmissionInDB
+from app.models.form import Form, FormSubmission
+from app.schemas.form import FormCreateRequest, FormFieldResponse, FormInDB, FormSubmissionCreate, FormSubmissionDataForGetFormSubmissionResponse, FormSubmissionInDB, FormSubmissionResponse, GetFormSubmissionsResponse
 
 
 class FormService:
     async def create_form(
         self,
         *,
-        data: FormCreate,
+        data: FormCreateRequest,
         db: Session,
-        # user: UserInDB
+        user: UUID
     ) -> FormInDB:
         new_form = Form(
+            creator_id=user,
             title=data.title,
             description=data.description,
             fields=[field.model_dump() for field in data.fields]
@@ -25,20 +26,14 @@ class FormService:
 
         db.add(new_form)
         db.commit()
-        db.refresh(new_form)
 
-        return FormInDB(
-            id=new_form.id,
-            title=new_form.title,
-            description=new_form.description,
-            fields=new_form.fields
-        )
+        return FormInDB.model_validate(new_form)
 
     async def get_forms(
         self,
         *,
         db: Session,
-        # user: Depends(authorize_user)
+        user: UUID
     ) -> list[FormInDB]:
         forms = db.query(Form).all()
         return TypeAdapter(list[FormInDB]).validate_python(forms)
@@ -53,12 +48,7 @@ class FormService:
         if not form:
             raise HTTPException(status_code=404, detail="Form not found")
 
-        return FormInDB(
-            id=form.id,
-            title=form.title,
-            description=form.description,
-            fields=form.fields
-        )
+        return FormInDB.model_validate(form)
 
     async def delete_form(
         self,
@@ -75,36 +65,57 @@ class FormService:
         self,
         *,
         form_id: UUID,
-        # user: UserInDB,
+        user: UUID,
         db: Session,
-        data: dict
-    ) -> None:
+        data: FormSubmissionCreate
+    ) -> FormSubmissionResponse:
         form = db.query(Form).filter(Form.id == form_id).first()
         if not form:
             raise HTTPException(status_code=404, detail="Form not found")
 
-        submission = FormSubmissionCreate(
+        submission = FormSubmission(
             form_id=form_id,
-            data=data,
+            user_id=user,
+            data=[response.model_dump() for response in data.responses],
             submitted_at=str(datetime.now(timezone.utc))
         )
 
         db.add(submission)
         db.commit()
-        db.refresh(submission)
 
-        return FormSubmissionInDB(
-            id=submission.id,
-            form_id=submission.form_id,
-            data=submission.data,
-            submitted_at=submission.submitted_at
+        return FormSubmissionResponse(
+            id=UUID(str(submission.id)),
+            message="Form submitted successfully"
         )
+    
+    def convert_to_dict(self, fields: list[FormFieldResponse]) -> dict:
+        return {field.field_id: field.value for field in fields}
 
     async def get_submissions(
         self,
         *,
-        form_id: UUID
-    ) -> None:
-        pass
+        form_id: UUID,
+        page: int,
+        limit: int,
+        db: Session
+    ) -> GetFormSubmissionsResponse:
+        submissions = db.query(FormSubmission).filter(FormSubmission.form_id == form_id).limit(limit).offset((page - 1) * limit).all()
+        total_count = len(submissions)
+
+        submissions_data = [
+            FormSubmissionDataForGetFormSubmissionResponse(
+                submission_id=UUID(str(submission.id)),
+                submitted_at=submission.submitted_at,  # type: ignore
+                data=self.convert_to_dict(TypeAdapter(list[FormFieldResponse]).validate_python(submission.data))
+            )
+            for submission in submissions
+        ]
+
+        return GetFormSubmissionsResponse(
+            total_count=total_count,
+            page=page,
+            limit=limit,
+            submissions=submissions_data
+        )
 
 form_service = FormService()

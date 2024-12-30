@@ -2,6 +2,7 @@ import logging
 from fastapi.requests import Request
 from fastapi.responses import JSONResponse
 
+from sqlalchemy.exc import IntegrityError
 
 logger = logging.getLogger(__name__)
 
@@ -11,10 +12,9 @@ class APIException(Exception):
     This is API exception
     """
 
-    def __init__(self, error_code: int = 000, status_code: int = 500, detail="", message="", *args, **kwargs):
+    def __init__(self, status_code: int = 500, detail="", message="", *args, **kwargs):
         Exception.__init__(self, *args, **kwargs)
 
-        self.error_code = error_code
         self.message = message
         self.detail = detail
         self.status_code = status_code
@@ -24,8 +24,17 @@ class APIException(Exception):
     
     @staticmethod
     async def handler(request: Request, exception: 'APIException') -> JSONResponse:
-        content = {"detail": exception.detail, "message": exception.message, "error_code": exception.error_code}
+        content = {"detail": exception.detail, "message": exception.message}
         return JSONResponse(content, status_code=exception.status_code)
+
+
+class SQLAlchemyExceptionHandler:
+    @staticmethod
+    async def integrityErrorHandler(request: Request, exc: IntegrityError) -> JSONResponse:
+        return JSONResponse(
+            content={"detail": "Database integrity error", "message": exc.code},
+            status_code=400
+        )
 
 
 async def log_request_info(request: Request):
