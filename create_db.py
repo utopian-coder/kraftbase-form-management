@@ -3,7 +3,12 @@ from sqlalchemy import text
 
 from app.settings.config import settings
 
-engine = create_engine(settings.DATABASE_URI)
+if settings.LOCAL:
+    admin_url = "postgresql://postgres:root@localhost:5432/postgres"
+else:
+    admin_url = "postgresql://postgres:root@postgres:5432/postgres"
+
+engine = create_engine(admin_url)
 
 NEW_DB_NAME = 'kraftbase'
 
