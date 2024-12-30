@@ -1,7 +1,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy import text
 
-engine = create_engine("postgresql://postgres:root@localhost:5432/postgres")
+from app.settings.config import settings
+
+engine = create_engine(settings.DATABASE_URI)
 
 NEW_DB_NAME = 'kraftbase'
 
