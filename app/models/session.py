@@ -1,9 +1,6 @@
 from sqlalchemy import Column, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.ext.declarative import declarative_base
-
-
-Base = declarative_base()
+from .base import Base
 
 
 class UserSession(Base):

@@ -1,6 +1,6 @@
 import base64
 from typing import Annotated
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import Cookie, Depends, HTTPException
 from pydantic import BaseModel
@@ -25,25 +25,28 @@ class UserSessionService:
     db.add(user_session)
     db.commit()
 
-    return base64.urlsafe_b64encode(session_token)
+    return base64.urlsafe_b64encode(session_token.bytes).decode('utf-8')
 
   @staticmethod
-  async def authorize(cookies: Annotated[SessionCookies, Cookie()], db = Depends(db.get_db)) -> User:
+  async def authorize(cookies: Annotated[SessionCookies, Cookie()], db = Depends(db.get_db)) -> UUID:
     session_token = cookies.session_token
-    _token = base64.urlsafe_b64decode(session_token)
+    _token =  UUID(bytes=base64.urlsafe_b64decode(session_token))
 
     # Retrieve user
     user_session = db.query(UserSession).filter(UserSession.token == _token).first()
-    
+
     if user_session:
-        return UserInDB.model_validate(user_session.user)
+        return user_session.user
     else:
         raise HTTPException(status_code=401, detail="Invalid session or user not found")
 
   @staticmethod
   async def logout(cookies: Annotated[SessionCookies, Cookie()], db = Depends(db.get_db)):
+    print(cookies)
     session_token = cookies.session_token
-    _token = base64.urlsafe_b64decode(session_token)
+    _token = UUID(bytes=base64.urlsafe_b64decode(session_token))
+
+    print(f"_token: {_token}")
 
     # Delete the user's session_token in the database
     db.query(UserSession).filter(UserSession.token == _token).delete()
